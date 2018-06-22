@@ -1,0 +1,145 @@
+version: '3.6'
+
+networks:
+  qdnet:
+  hdnet:
+volumes:
+  nginx:
+  mysql:
+  mysql5:
+  php-fpm:
+  php-fpm-5:
+  node:
+#  workspace:
+#    name: web-data
+
+
+services:
+
+  nginx:
+    build:
+      context: ./nginx
+#    expose:
+#      - 80
+#      - 443
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - php-fpm
+      - php-fpm-5
+    volumes:
+      - ${PROJECT_PATH}:${APP_CODE_PATH}
+      - ${NGINX_HOST_LOG_PATH}:/var/log/nginx
+      - ${NGINX_PHP_UPSTREAM_PATH}:/etc/nginx/conf.d/upstream.conf
+      - ${NGINX_SITES_PATH}:/etc/nginx/sites-available
+    networks:
+      - qdnet
+      - hdnet
+    tty: true
+
+
+
+  mysql:
+    build:
+      context: ./mysql
+#    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=dphp
+#      - MYSQL_DATABASE=default
+#      - MYSQL_USER=dphp
+#      - MYSQL_PASSWORD=root
+    expose:
+      - "3306"
+#    ports:
+#      - "3306:3306"
+    volumes:
+      - ${MYSQL_DATA_PATH}:/var/lib/mysql
+      - ${MY_CNF}:/etc/mysql/conf.d/my.cnf
+#    working_dir: /var/www
+    networks:
+      - qdnet
+      - hdnet
+    tty: true
+
+
+
+  mysql5:
+    build:
+      context: ./mysql
+      dockerfile: Dockerfile-5
+#    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=dphp
+#      - MYSQL_DATABASE=default
+#      - MYSQL_USER=dphp
+#      - MYSQL_PASSWORD=root
+    expose:
+      - "3306"
+#    ports:
+#      - "3306:3306"
+    volumes:
+      - ${MYSQL_DATA_PATH5}:/var/lib/mysql
+      - ${MY_CNF5}:/etc/mysql/conf.d/my.cnf
+#    working_dir: /var/www
+    networks:
+      - qdnet
+      - hdnet
+    tty: true
+
+
+
+  php-fpm:
+    build:
+      context: ./php
+#      dockerfile: Dockerfile
+      args:
+        - PHP_VERSION=7
+    expose:
+      - "9000"
+    volumes:
+      - ./php/php72.ini:/usr/local/etc/php/php.ini
+#      - ./php/conf.d:/usr/local/etc/php/conf.d
+      - ${PROJECT_PATH}:${APP_CODE_PATH}
+    working_dir: /var/www
+    networks:
+      - qdnet
+      - hdnet
+    tty: true
+
+
+
+  php-fpm-5:
+    build:
+      context: ./php
+      dockerfile: Dockerfile-5
+#      args:
+#        - PHP_VERSION=5
+    expose:
+      - "9000"
+    volumes:
+      - ./php/php56.ini:/usr/local/etc/php/php.ini
+#      - ./php/conf.d:/usr/local/etc/php/conf.d
+      - ${PROJECT_PATH}:${APP_CODE_PATH}
+    working_dir: /var/www
+    networks:
+      - qdnet
+      - hdnet
+    tty: true
+
+
+  node:
+    image: node:alpine
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    extra_hosts:
+      - "dockerhost:${DOCKER_HOST_IP}"
+    volumes:
+      - ${PROJECT_PATH}:${APP_CODE_PATH}
+    working_dir: /var/www
+#    stdin_open: true
+    tty: true
+    networks:
+      - qdnet
+      - hdnet
